@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zip Distance Finder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-calculate {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-clear {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-debug {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        .results {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+        }
+
+        .zip-info {
+            background-color: white;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #eee;
+            border-radius: 3px;
+        }
+
+        .distance {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 15px 0;
+            padding: 15px;
+            background-color: white;
+            border: 2px solid #007bff;
+            border-radius: 3px;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border: 1px solid #f5c6cb;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border: 1px solid #c3e6cb;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .debug {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 3px;
+            display: none;
+        }
+
+        .debug.show {
+            display: block;
+        }
+
+        .debug h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+
+        .debug-info {
+            background-color: #f8f9fa;
+            padding: 8px;
+            margin: 8px 0;
+            border-left: 3px solid #ffc107;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Zip Distance Finder</h1>
+        <p class="subtitle">Calculate the distance between two zip codes</p>
+        
+        <div class="form-group">
+            <label for="zip1">First Zip Code:</label>
+            <input type="text" id="zip1" placeholder="Enter first zip code (e.g., 10001)" maxlength="5">
+        </div>
+        
+        <div class="form-group">
+            <label for="zip2">Second Zip Code:</label>
+            <input type="text" id="zip2" placeholder="Enter second zip code (e.g., 90210)" maxlength="5">
+        </div>
+        
+        <div class="buttons">
+            <button class="btn-calculate" onclick="calculateDistance()">Calculate Distance</button>
+            <button class="btn-clear" onclick="clearResults()">Clear</button>
+            <button class="btn-debug" onclick="toggleDebug()">Debug</button>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            Calculating distance...
+        </div>
+        
+        <div id="results" style="display: none;">
+            <!-- Results will appear here -->
+        </div>
+        
+        <div id="debug" class="debug">
+            <h3>Debug Information</h3>
+            <div id="debugContent"></div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2025 Zip Distance Calculator</p>
+        </div>
+    </div>
+
+    <script>
+        let debugMode = false;
+        let zipData = {};
+
+        // Load zip code data when page loads
+        window.onload = function() {
+            loadZipData();
+        };
+
+        function loadZipData() {
+            addDebugInfo('Loading zip code data...');
+            fetch('load_zip_data.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        zipData = data.data;
+                        addDebugInfo('Loaded ' + Object.keys(zipData).length + ' zip codes');
+                        showMessage('Zip code database loaded successfully!', 'success');
+                    } else {
+                        showMessage('Failed to load zip code data: ' + data.error, 'error');
+                        addDebugInfo('Error loading zip data: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    showMessage('Error loading zip code data: ' + error.message, 'error');
+                    addDebugInfo('Fetch error: ' + error.message);
+                });
+        }
+
+        function calculateDistance() {
+            const zip1 = document.getElementById('zip1').value.trim();
+            const zip2 = document.getElementById('zip2').value.trim();
+            
+            // Check if both zip codes are entered
+            if (!zip1 || !zip2) {
+                showMessage('Please enter both zip codes', 'error');
+                return;
+            }
+            
+            // Check if zip codes are valid (5 digits)
+            if (!/^\d{5}$/.test(zip1) || !/^\d{5}$/.test(zip2)) {
+                showMessage('Please enter valid 5-digit zip codes', 'error');
+                return;
+            }
+            
+            // Check if zip codes are different
+            if (zip1 === zip2) {
+                showMessage('Please enter two different zip codes', 'error');
+                return;
+            }
+            
+            // Show loading message
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            addDebugInfo('Starting calculation for ' + zip1 + ' and ' + zip2);
+            
+            // Send data to PHP
+            const formData = new FormData();
+            formData.append('zip1', zip1);
+            formData.append('zip2', zip2);
+            
+            fetch('calculate_distance.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                
+                if (data.success) {
+                    displayResults(data);
+                    addDebugInfo('Calculation completed successfully');
+                } else {
+                    showMessage(data.error, 'error');
+                    addDebugInfo('Calculation error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                showMessage('Error calculating distance: ' + error.message, 'error');
+                addDebugInfo('Fetch error: ' + error.message);
+            });
+        }
+
+        function displayResults(data) {
+            const html = `
+                <div class="zip-info">
+                    <h3>${data.zip1_info.zip} - ${data.zip1_info.city}, ${data.zip1_info.state}</h3>
+                    <p>Latitude: ${data.zip1_info.lat}</p>
+                    <p>Longitude: ${data.zip1_info.lng}</p>
+                </div>
+                
+                <div class="distance">
+                    Distance: ${data.distance} miles
+                </div>
+                
+                <div class="zip-info">
+                    <h3>${data.zip2_info.zip} - ${data.zip2_info.city}, ${data.zip2_info.state}</h3>
+                    <p>Latitude: ${data.zip2_info.lat}</p>
+                    <p>Longitude: ${data.zip2_info.lng}</p>
+                </div>
+                
+                <p style="text-align: center; color: #666; margin-top: 15px;">
+                    <small>Calculated using Haversine formula</small>
+                </p>
+            `;
+            
+            document.getElementById('results').innerHTML = html;
+            document.getElementById('results').className = 'results';
+            document.getElementById('results').style.display = 'block';
+            
+            if (debugMode) {
+                addDebugInfo('Distance: ' + data.distance + ' miles between ' + 
+                           data.zip1_info.zip + ' and ' + data.zip2_info.zip);
+            }
+        }
+
+        function showMessage(message, type) {
+            const html = '<div class="' + type + '">' + message + '</div>';
+            document.getElementById('results').innerHTML = html;
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function clearResults() {
+            document.getElementById('zip1').value = '';
+            document.getElementById('zip2').value = '';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+            
+            if (debugMode) {
+                document.getElementById('debugContent').innerHTML = '';
+            }
+            
+            addDebugInfo('Form cleared');
+        }
+
+        function toggleDebug() {
+            debugMode = !debugMode;
+            const debugDiv = document.getElementById('debug');
+            
+            if (debugMode) {
+                debugDiv.classList.add('show');
+                addDebugInfo('Debug mode ON');
+            } else {
+                debugDiv.classList.remove('show');
+            }
+        }
+
+        function addDebugInfo(message) {
+            if (!debugMode) return;
+            
+            const debugContent = document.getElementById('debugContent');
+            const time = new Date().toLocaleTimeString();
+            const debugInfo = document.createElement('div');
+            debugInfo.className = 'debug-info';
+            debugInfo.innerHTML = '[' + time + '] ' + message;
+            debugContent.appendChild(debugInfo);
+        }
+
+        // Allow Enter key to calculate
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                calculateDistance();
+            }
+        });
+    </script>
+</body>
+</html>
